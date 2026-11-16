@@ -1,0 +1,11 @@
+# Build output
+bin/
+obj/
+
+# User-specific files
+.vs/
+
+#environment variables and secrets
+.env
+.env.*
+secrets.json
