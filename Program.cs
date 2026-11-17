@@ -113,6 +113,74 @@ var validGiftcards = allGiftcards
 
 Console.WriteLine($"Open and valid giftcards: {validGiftcards.Count}");
 
+var csvPath = Path.Combine(
+    AppContext.BaseDirectory,
+    "giftcards.csv");
+
+var properties = typeof(Giftcard).GetProperties();
+
+var csv = new StringBuilder();
+Console.WriteLine($"Giftcard properties: {properties.Length}");
+
+foreach (var property in properties)
+{
+    Console.WriteLine(property.Name);
+}
+
+// Otsikkorivi
+csv.AppendLine(string.Join(",",
+    properties.Select(property => property.Name)));
+
+// Lahjakorttien rivit
+foreach (var giftcard in validGiftcards)
+{
+    var rowValues = properties.Select(property =>
+    {
+        var value = property.GetValue(giftcard);
+
+        if (value == null)
+            return "";
+
+        string stringValue;
+
+        if (value is JsonElement jsonElement)
+        {
+            stringValue = jsonElement.GetRawText();
+        }
+        else if (value is System.Collections.IEnumerable enumerable
+                 && value is not string)
+        {
+            stringValue = JsonSerializer.Serialize(value);
+        }
+        else
+        {
+            stringValue = value.ToString() ?? "";
+        }
+
+        return EscapeCsvValue(stringValue);
+    });
+
+    csv.AppendLine(string.Join(",", rowValues));
+}
+
+await File.WriteAllTextAsync(
+    csvPath,
+    csv.ToString(),
+    Encoding.UTF8);
+
+Console.WriteLine($"CSV exported to: {csvPath}");
+
+static string EscapeCsvValue(string value)
+{
+    if (value.Contains(',') || value.Contains('"') ||
+        value.Contains('\n') || value.Contains('\r'))
+    {
+        value = value.Replace("\"", "\"\"");
+        return $"\"{value}\"";
+    }
+
+    return value;
+}
 
 public class TokenResponse
 {
