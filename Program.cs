@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -48,7 +49,7 @@ Console.WriteLine("Access token retrieved successfully.");
 
 const int pageSize = 100;
 var skip = 0;
-var allGiftcards = new List<JsonElement>();
+var allGiftcards = new List<Giftcard>();
 
 var apiUrl = "https://sq-giftcards-api-2-stage.azurewebsites.net/v1/Giftcard";
 
@@ -63,7 +64,7 @@ while (true)
 
     var giftcardContent = await giftcardResponse.Content.ReadAsStringAsync();
 
-    var giftcards = JsonSerializer.Deserialize<List<JsonElement>>(giftcardContent);
+    var giftcards = JsonSerializer.Deserialize<List<Giftcard>>(giftcardContent);
 
     if (giftcards == null || giftcards.Count == 0)
     {
@@ -79,39 +80,38 @@ while (true)
 Console.WriteLine("\n--- Giftcard statistics ---");
 
 var statusGroups = allGiftcards
-    .GroupBy(card => card.GetProperty("status").GetString());
+    .GroupBy(card => card.Status);
 
 foreach (var group in statusGroups)
 {
     Console.WriteLine($"Status '{group.Key}': {group.Count()}");
 }
 
-var expiredCount = allGiftcards.Count(card =>
-    card.GetProperty("isExpired").GetBoolean());
+var expiredCount = allGiftcards.Count(card => card.IsExpired);
 
 var notStartedCount = allGiftcards.Count(card =>
-    DateTimeOffset.Parse(
-        card.GetProperty("validFromUtc").GetString()!) > DateTimeOffset.UtcNow);
+    card.ValidFromUtc > DateTimeOffset.UtcNow);
 
 var currentlyValidCount = allGiftcards.Count(card =>
-{
-    var validFrom = DateTimeOffset.Parse(
-        card.GetProperty("validFromUtc").GetString()!);
-
-    var validTo = DateTimeOffset.Parse(
-        card.GetProperty("validToUtc").GetString()!);
-
-    return validFrom <= DateTimeOffset.UtcNow &&
-           validTo >= DateTimeOffset.UtcNow &&
-           !card.GetProperty("isExpired").GetBoolean();
-});
+    card.ValidFromUtc <= DateTimeOffset.UtcNow &&
+    card.ValidToUtc >= DateTimeOffset.UtcNow &&
+    !card.IsExpired);
 
 Console.WriteLine($"Total giftcards: {allGiftcards.Count}");
 Console.WriteLine($"Expired: {expiredCount}");
 Console.WriteLine($"Not started: {notStartedCount}");
 Console.WriteLine($"Currently valid: {currentlyValidCount}");
-
 Console.WriteLine($"Finished fetching. Total giftcards: {allGiftcards.Count}");
+
+var validGiftcards = allGiftcards
+    .Where(card =>
+        card.Status == "Active" &&
+        card.ValidFromUtc <= DateTimeOffset.UtcNow &&
+        card.ValidToUtc >= DateTimeOffset.UtcNow &&
+        !card.IsExpired)
+    .ToList();
+
+Console.WriteLine($"Open and valid giftcards: {validGiftcards.Count}");
 
 
 public class TokenResponse
