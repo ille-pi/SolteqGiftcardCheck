@@ -76,6 +76,40 @@ while (true)
 
     skip += pageSize;
 }
+Console.WriteLine("\n--- Giftcard statistics ---");
+
+var statusGroups = allGiftcards
+    .GroupBy(card => card.GetProperty("status").GetString());
+
+foreach (var group in statusGroups)
+{
+    Console.WriteLine($"Status '{group.Key}': {group.Count()}");
+}
+
+var expiredCount = allGiftcards.Count(card =>
+    card.GetProperty("isExpired").GetBoolean());
+
+var notStartedCount = allGiftcards.Count(card =>
+    DateTimeOffset.Parse(
+        card.GetProperty("validFromUtc").GetString()!) > DateTimeOffset.UtcNow);
+
+var currentlyValidCount = allGiftcards.Count(card =>
+{
+    var validFrom = DateTimeOffset.Parse(
+        card.GetProperty("validFromUtc").GetString()!);
+
+    var validTo = DateTimeOffset.Parse(
+        card.GetProperty("validToUtc").GetString()!);
+
+    return validFrom <= DateTimeOffset.UtcNow &&
+           validTo >= DateTimeOffset.UtcNow &&
+           !card.GetProperty("isExpired").GetBoolean();
+});
+
+Console.WriteLine($"Total giftcards: {allGiftcards.Count}");
+Console.WriteLine($"Expired: {expiredCount}");
+Console.WriteLine($"Not started: {notStartedCount}");
+Console.WriteLine($"Currently valid: {currentlyValidCount}");
 
 Console.WriteLine($"Finished fetching. Total giftcards: {allGiftcards.Count}");
 
