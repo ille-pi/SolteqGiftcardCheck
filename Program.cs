@@ -1,11 +1,11 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 Environment.SetEnvironmentVariable("DOTNET_ENVIRONMENT", "Development");
-
 
 var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddHttpClient();
@@ -77,31 +77,7 @@ while (true)
 
     skip += pageSize;
 }
-Console.WriteLine("\n--- Giftcard statistics ---");
-
-var statusGroups = allGiftcards
-    .GroupBy(card => card.Status);
-
-foreach (var group in statusGroups)
-{
-    Console.WriteLine($"Status '{group.Key}': {group.Count()}");
-}
-
-var expiredCount = allGiftcards.Count(card => card.IsExpired);
-
-var notStartedCount = allGiftcards.Count(card =>
-    card.ValidFromUtc > DateTimeOffset.UtcNow);
-
-var currentlyValidCount = allGiftcards.Count(card =>
-    card.ValidFromUtc <= DateTimeOffset.UtcNow &&
-    card.ValidToUtc >= DateTimeOffset.UtcNow &&
-    !card.IsExpired);
-
-Console.WriteLine($"Total giftcards: {allGiftcards.Count}");
-Console.WriteLine($"Expired: {expiredCount}");
-Console.WriteLine($"Not started: {notStartedCount}");
-Console.WriteLine($"Currently valid: {currentlyValidCount}");
-Console.WriteLine($"Finished fetching. Total giftcards: {allGiftcards.Count}");
+Console.WriteLine($"Total giftcards fetched: {allGiftcards.Count}");
 
 var validGiftcards = allGiftcards
     .Where(card =>
@@ -120,12 +96,6 @@ var csvPath = Path.Combine(
 var properties = typeof(Giftcard).GetProperties();
 
 var csv = new StringBuilder();
-Console.WriteLine($"Giftcard properties: {properties.Length}");
-
-foreach (var property in properties)
-{
-    Console.WriteLine(property.Name);
-}
 
 // Otsikkorivi
 csv.AppendLine(string.Join(",",
