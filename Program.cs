@@ -22,6 +22,7 @@ var app = builder.Build();
 var httpClientFactory = app.Services.GetRequiredService<IHttpClientFactory>();
 var httpClient = httpClientFactory.CreateClient();
 
+// Haetaan API:n käyttöön tarvittava access token Client Credentials -mallilla.
 var values = new Dictionary<string, string>
 {
     { "grant_type", "client_credentials" },
@@ -47,6 +48,7 @@ if (string.IsNullOrEmpty(accessToken))
 
 Console.WriteLine("Access token retrieved successfully.");
 
+// Haetaan lahjakortit 100 kappaleen erissä, kunnes kaikki tulokset on käyty läpi.
 const int pageSize = 100;
 var skip = 0;
 var allGiftcards = new List<Giftcard>();
@@ -79,6 +81,7 @@ while (true)
 }
 Console.WriteLine($"Total giftcards fetched: {allGiftcards.Count}");
 
+// Rajataan tuloksiin vain aktiiviset ja tällä hetkellä voimassa olevat lahjakortit.
 var validGiftcards = allGiftcards
     .Where(card =>
         card.Status == "Active" &&
@@ -89,6 +92,8 @@ var validGiftcards = allGiftcards
 
 Console.WriteLine($"Open and valid giftcards: {validGiftcards.Count}");
 
+
+// Tallennetaan CSV sovelluksen suoritus-hakemistoon.
 var csvPath = Path.Combine(
     AppContext.BaseDirectory,
     "giftcards.csv");
@@ -99,7 +104,9 @@ var csv = new StringBuilder();
 
 // Otsikkorivi
 csv.AppendLine(string.Join(",",
-    properties.Select(property => property.Name)));
+    properties.Select(property =>
+        property.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name
+        ?? property.Name)));
 
 // Lahjakorttien rivit
 foreach (var giftcard in validGiftcards)
@@ -117,8 +124,7 @@ foreach (var giftcard in validGiftcards)
         {
             stringValue = jsonElement.GetRawText();
         }
-        else if (value is System.Collections.IEnumerable enumerable
-                 && value is not string)
+        else if (value is System.Collections.IEnumerable && value is not string)
         {
             stringValue = JsonSerializer.Serialize(value);
         }
@@ -140,6 +146,7 @@ await File.WriteAllTextAsync(
 
 Console.WriteLine($"CSV exported to: {csvPath}");
 
+// Käsitellään CSV:n erikoismerkit, jotta arvot eivät riko sarakkeiden rakennetta.
 static string EscapeCsvValue(string value)
 {
     if (value.Contains(',') || value.Contains('"') ||
